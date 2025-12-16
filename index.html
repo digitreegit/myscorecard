@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>My Golf Score</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { ink:"#0a0a0a" } } } }
+  </script>
+
+  <!-- For PWA START -->
+   <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#111111" />
+
+  <!-- iOS (Safari) home -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <!-- For PWA END -->
+
+  <style>
+    body { background:#f7f7f7; }
+    .safe-top { padding-top: max(1rem, env(safe-area-inset-top)); }
+    .shadow-soft { box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+    .tap { -webkit-tap-highlight-color: transparent; }
+    .pill { border:1px solid rgba(0,0,0,.08); background:rgba(0,0,0,.02); }
+
+    #histBars .hist-col { height: 140px; }
+    #histBars .hist-bar { width: 100%; }
+
+    .bottom-fixed {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      width: min(100%, 448px);
+      z-index: 50;
+      padding: 10px 16px max(14px, env(safe-area-inset-bottom));
+      background: linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,.92), rgba(255,255,255,0));
+      pointer-events: none;
+    }
+    .bottom-fixed .bar-inner { pointer-events: auto; }
+
+    .ios-shrink {
+      transform-origin: center;
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+      will-change: transform;
+    }
+    .ios-shrink.shrunk {
+      transform: scale(0.94);
+      filter: saturate(0.98);
+      box-shadow: 0 12px 34px rgba(0,0,0,.12);
+    }
+
+    :root { --bar-h: 92px; }
+    .content-pad { padding-bottom: calc(var(--bar-h) + 12px); }
+
+    .tabrow { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .tablink {
+      position: relative;
+      padding: 6px 0;
+      font-size: 14px;
+      color: rgba(0,0,0,.48);
+      font-weight: 600;
+      line-height: 1.1;
+    }
+    .tablink:hover { color: rgba(0,0,0,.68); }
+    .tablink.active { color: rgba(0,0,0,.92); }
+    .tablink.active::after{
+      content:"";
+      position:absolute;
+      left:0; right:0;
+      bottom:-6px;
+      height:2px;
+      border-radius:2px;
+      background: rgba(0,0,0,.9);
+    }
+    .tabsep { color: rgba(0,0,0,.18); user-select:none; }
+
+    /* radio row */
+    .radio-card {
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 14px;
+      padding: 10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      background:#fff;
+    }
+    .radio-card:has(input:checked){
+      border-color: rgba(0,0,0,.9);
+      box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen text-neutral-900">
+  <div id="app" class="max-w-md mx-auto min-h-screen bg-white relative overflow-hidden">
+    <header class="safe-top px-4 pt-4 pb-3 border-b bg-white sticky top-0 z-20">
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight" id="title">My Score Card</h1>
+          <p class="text-xs text-neutral-500 mt-1" id="subtitle">Track rounds • Store locally</p>
+        </div>
+        <div class="text-right">
+          <div class="text-[11px] text-neutral-500">Average</div>
+          <div class="text-lg font-semibold tabular-nums" id="avgValue">—</div>
+        </div>
+      </div>
+
+      <div class="mt-3 flex items-center gap-2">
+        <button id="tabList" class="tap px-3 py-2 rounded-xl text-sm font-semibold bg-neutral-900 text-white">Rounds</button>
+        <button id="tabStats" class="tap px-3 py-2 rounded-xl text-sm font-semibold bg-neutral-100 text-neutral-700">Stats</button>
+        <div class="ml-auto text-[11px] text-neutral-500" id="tabHint">Search / Filter</div>
+      </div>
+
+      <div id="listHeader" class="mt-3">
+        <div class="flex items-center gap-2">
+          <div class="flex-1 relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">🔎</span>
+            <input id="searchInput"
+              class="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-100 outline-none focus:ring-2 focus:ring-neutral-200"
+              placeholder="Search (course / companion)" />
+          </div>
+        </div>
+
+        <div class="mt-3 tabrow">
+          <button class="tablink tap active" data-year="all">
+            All <span class="text-[11px] text-neutral-400 tab-count" data-count="all">(0)</span>
+          </button>
+          <span class="tabsep" aria-hidden="true">|</span>
+          <button class="tablink tap" data-year="this">
+            This Year <span class="text-[11px] text-neutral-400 tab-count" data-count="this">(0)</span>
+          </button>
+          <span class="tabsep" aria-hidden="true">|</span>
+          <button class="tablink tap" data-year="prev">
+            Previous Years <span class="text-[11px] text-neutral-400 tab-count" data-count="prev">(0)</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="mainContent" class="px-4 py-4 content-pad">
+      <section id="viewList" class="space-y-3"></section>
+
+      <section id="viewRound" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+          <button id="backToList" class="tap text-sm text-neutral-600 hover:text-neutral-900">← Back</button>
+          <div class="text-sm text-neutral-500" id="roundMetaTop"></div>
+          <button id="editRoundBtn" class="tap text-sm font-semibold">Edit</button>
+        </div>
+
+        <div class="rounded-2xl border bg-white p-4 shadow-soft">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-xs text-neutral-500">Location</div>
+              <div class="text-lg font-semibold" id="roundLocation">—</div>
+              <div class="mt-1 text-sm text-neutral-600" id="roundCompanions">—</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-neutral-500">Total</div>
+              <div class="text-3xl font-semibold tabular-nums" id="roundTotal">0</div>
+              <div class="text-xs text-neutral-500 mt-1" id="holesCountLabel">18 holes</div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-3 gap-3" id="holesGrid"></div>
+
+          <div class="mt-4 flex items-center gap-3">
+            <label class="flex items-center gap-2 text-sm text-neutral-700 tap">
+              <input id="excludeToggle" type="checkbox" class="h-4 w-4 rounded border-neutral-300" />
+              Exclude from score average
+            </label>
+            <div class="ml-auto flex gap-2">
+              <button id="resetScoresBtn" class="tap text-sm px-3 py-2 rounded-xl border hover:bg-neutral-50">Reset</button>
+              <button id="deleteRoundBtn" class="tap text-sm px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50">Delete</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="viewStats" class="hidden space-y-4">
+        <div class="rounded-2xl border p-4 shadow-soft">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs text-neutral-500">Recent 10 (Excluded ignored)</div>
+              <div class="text-xl font-semibold">Stats</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-neutral-500">Avg (Recent 10)</div>
+              <div class="text-2xl font-semibold tabular-nums" id="avg10Value">—</div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <div class="rounded-2xl border p-3">
+              <div class="text-xs text-neutral-500">Best (Lowest)</div>
+              <div class="mt-1 text-lg font-semibold tabular-nums" id="bestValue">—</div>
+              <div class="text-xs text-neutral-500 mt-1" id="bestMeta">—</div>
+            </div>
+            <div class="rounded-2xl border p-3">
+              <div class="text-xs text-neutral-500">Worst (Highest)</div>
+              <div class="mt-1 text-lg font-semibold tabular-nums" id="worstValue">—</div>
+              <div class="text-xs text-neutral-500 mt-1" id="worstMeta">—</div>
+            </div>
+          </div>
+
+          <div class="mt-3 rounded-2xl border p-3">
+            <div class="text-xs text-neutral-500">Spread</div>
+            <div class="mt-1 flex items-center justify-between text-sm">
+              <span class="text-neutral-700">Min</span>
+              <span class="font-semibold tabular-nums" id="minValue">—</span>
+            </div>
+            <div class="mt-1 flex items-center justify-between text-sm">
+              <span class="text-neutral-700">Max</span>
+              <span class="font-semibold tabular-nums" id="maxValue">—</span>
+            </div>
+            <div class="mt-1 flex items-center justify-between text-sm">
+              <span class="text-neutral-700">Std Dev</span>
+              <span class="font-semibold tabular-nums" id="stdValue">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border p-4 shadow-soft">
+          <div class="flex items-end justify-between">
+            <div>
+              <div class="text-xs text-neutral-500">Histogram</div>
+              <div class="text-lg font-semibold">Score Distribution</div>
+            </div>
+            <div class="text-xs text-neutral-500" id="histRange">—</div>
+          </div>
+
+          <div class="mt-4 flex items-end gap-2" id="histBars"></div>
+          <div class="mt-3 flex flex-wrap gap-2 text-xs text-neutral-600" id="histLegend"></div>
+          <div class="mt-2 text-xs text-neutral-500">
+            * Each value represents the total score for the round (relative to par). Excluded rounds are excluded from the statistics.
+          </div>
+        </div>
+
+        <div class="rounded-2xl border p-4 shadow-soft">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs text-neutral-500">Recent 10</div>
+              <div class="text-lg font-semibold">Rounds</div>
+            </div>
+            <div class="text-xs text-neutral-500" id="recentCount">—</div>
+          </div>
+          <div class="mt-3 space-y-2" id="recentList"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="addBar" class="bottom-fixed hidden">
+      <div class="bar-inner ios-shrink" id="iosBar">
+        <button id="addRoundBtn"
+          class="tap w-full py-3 rounded-2xl bg-neutral-900 text-white font-semibold shadow-soft flex items-center justify-center gap-2">
+          <span class="text-xl leading-none">+</span>
+          <span>Add Round</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE/EDIT MODAL -->
+  <div id="modalOverlay" class="hidden fixed inset-0 bg-black/40 z-40"></div>
+  <div id="modal"
+    class="hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(92vw,420px)]">
+    <div class="rounded-2xl bg-white shadow-soft border overflow-hidden">
+      <div class="px-4 py-3 border-b flex items-center justify-between">
+        <button id="cancelModal" class="tap text-sm text-neutral-600">Cancel</button>
+        <div class="text-sm font-semibold" id="modalTitle">Create Round</div>
+        <button id="saveModal" class="tap text-sm font-semibold">Save</button>
+      </div>
+
+      <div class="px-4 py-4 space-y-4">
+        <div>
+          <label class="text-xs text-neutral-500">Date (required)</label>
+          <input id="fieldDate" type="date"
+            class="mt-1 w-full px-3 py-3 rounded-xl bg-white border outline-none focus:ring-2 focus:ring-neutral-200" />
+        </div>
+
+        <div>
+          <label class="text-xs text-neutral-500">Location (required)</label>
+          <input id="fieldLocation" placeholder="e.g., Emeralda CC"
+            class="mt-1 w-full px-3 py-3 rounded-xl bg-white border outline-none focus:ring-2 focus:ring-neutral-200" />
+        </div>
+
+        <div>
+          <label class="text-xs text-neutral-500">Companions</label>
+          <input id="fieldCompanions" placeholder="e.g., Jung, Brandon, Rina"
+            class="mt-1 w-full px-3 py-3 rounded-xl bg-white border outline-none focus:ring-2 focus:ring-neutral-200" />
+        </div>
+
+        <!-- ✅ Radio buttons (18 default) -->
+        <div>
+          <label class="text-xs text-neutral-500">Number of Holes</label>
+
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <label class="radio-card tap cursor-pointer">
+              <div class="flex items-center gap-2">
+                <input id="holesRadio9" name="holesCount" type="radio" value="9" class="h-4 w-4" />
+                <span class="text-sm font-semibold">9 Holes</span>
+              </div>
+              <span class="text-xs text-neutral-500">Front</span>
+            </label>
+
+            <label class="radio-card tap cursor-pointer">
+              <div class="flex items-center gap-2">
+                <input id="holesRadio18" name="holesCount" type="radio" value="18" class="h-4 w-4" checked />
+                <span class="text-sm font-semibold">18 Holes</span>
+              </div>
+              <span class="text-xs text-neutral-500">Full</span>
+            </label>
+          </div>
+        </div>
+
+        <label class="flex items-center gap-2 text-sm text-neutral-700 tap">
+          <input id="fieldExclude" type="checkbox" class="h-4 w-4 rounded border-neutral-300" />
+          Exclude from score average
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOLE SCORE SHEET -->
+  <div id="sheetOverlay" class="hidden fixed inset-0 bg-black/35 z-40"></div>
+  <div id="sheet" class="hidden fixed left-0 right-0 bottom-0 z-50">
+    <div class="max-w-md mx-auto">
+      <div class="rounded-t-3xl bg-white border shadow-soft p-5">
+        <div class="flex items-center justify-between">
+          <button id="closeSheet" class="tap text-xl leading-none text-neutral-500">×</button>
+          <div class="text-center flex-1">
+            <div class="text-sm text-neutral-500" id="sheetCourse">—</div>
+            <div class="text-2xl font-semibold" id="sheetHole">Hole —</div>
+          </div>
+          <div class="w-8"></div>
+        </div>
+
+        <div class="mt-5 grid grid-cols-3 gap-3" id="sheetGrid"></div>
+
+        <div class="mt-4 text-center text-xs text-neutral-500">
+          The input value is the relative score compared to par (under/over).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const KEY = "golf_score_rounds_v1";
+    const state = {
+      rounds: load(),
+      view: "list",
+      activeId: null,
+      yearFilter: "all",
+      search: "",
+      editingId: null,
+      modalHoles: 18, // ✅ default 18
+      sheet: { open:false, holeIndex:0 }
+    };
+
+    function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } }
+    function save(){ localStorage.setItem(KEY, JSON.stringify(state.rounds)); }
+    function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+
+    function fmtTotal(n){ return n > 0 ? "+" + n : String(n); }
+    function totalOf(round){ return (round.scores || []).reduce((a,b)=>a + (Number(b)||0), 0); }
+    function avgAllNonExcluded(){
+      const arr = state.rounds.filter(r => !r.exclude);
+      if (!arr.length) return null;
+      const sum = arr.reduce((acc,r)=> acc + totalOf(r), 0);
+      return sum / arr.length;
+    }
+    function yearOf(dateStr){ return new Date(dateStr).getFullYear(); }
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    let lastShrink = false;
+    function onScroll(){
+      if (state.view !== "list") return;
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      const shrink = y > 14;
+      if (shrink !== lastShrink){
+        el.iosBar.classList.toggle("shrunk", shrink);
+        lastShrink = shrink;
+      }
+    }
+    function syncBottomBarHeight(){
+      if (el.addBar.classList.contains("hidden")) {
+        document.documentElement.style.setProperty("--bar-h", "0px");
+        return;
+      }
+      const h = el.addBar.getBoundingClientRect().height;
+      document.documentElement.style.setProperty("--bar-h", `${Math.ceil(h)}px`);
+    }
+
+    function updateYearTabCounts(){
+      const thisY = new Date().getFullYear();
+      const allCount = state.rounds.length;
+      const thisCount = state.rounds.filter(r => yearOf(r.date) === thisY).length;
+      const prevCount = state.rounds.filter(r => yearOf(r.date) < thisY).length;
+      const map = { all: allCount, this: thisCount, prev: prevCount };
+      el.tabCounts.forEach(span => {
+        const k = span.dataset.count;
+        span.textContent = `(${map[k] ?? 0})`;
+      });
+    }
+
+    function recentNonExcluded(limit=10){
+      return state.rounds
+        .filter(r => !r.exclude)
+        .slice()
+        .sort((a,b)=> new Date(b.date) - new Date(a.date))
+        .slice(0, limit);
+    }
+    function mean(nums){ return nums.length ? nums.reduce((a,b)=>a+b,0)/nums.length : null; }
+    function stddev(nums){
+      if (nums.length < 2) return 0;
+      const m = mean(nums);
+      const v = mean(nums.map(x => (x-m)*(x-m)));
+      return Math.sqrt(v);
+    }
+    function binHistogram(values, binCount=8){
+      if (!values.length) return { bins:[], min:0, max:0 };
+      const minV = Math.min(...values);
+      const maxV = Math.max(...values);
+
+      if (minV === maxV){
+        return {
+          min:minV, max:maxV, step:1, start:minV, end:maxV+1,
+          bins:[{ min:minV, max:maxV, count:values.length, label:`${fmtTotal(minV)}` }]
+        };
+      }
+
+      const span = maxV - minV;
+      const step = Math.max(1, Math.ceil(span / binCount));
+      const start = Math.floor(minV / step) * step;
+      const end = Math.ceil((maxV + 1) / step) * step;
+
+      const bins = [];
+      for (let b = start; b < end; b += step){
+        const minB = b;
+        const maxB = b + step - 1;
+        bins.push({ min:minB, max:maxB, count:0, label:`${fmtTotal(minB)}~${fmtTotal(maxB)}` });
+      }
+      values.forEach(v => {
+        const idx = Math.min(bins.length-1, Math.floor((v - start) / step));
+        bins[idx].count++;
+      });
+
+      return { bins, min:minV, max:maxV, step, start, end };
+    }
+
+    const el = {
+      title: document.getElementById("title"),
+      subtitle: document.getElementById("subtitle"),
+      avg: document.getElementById("avgValue"),
+
+      tabList: document.getElementById("tabList"),
+      tabStats: document.getElementById("tabStats"),
+      tabHint: document.getElementById("tabHint"),
+
+      listHeader: document.getElementById("listHeader"),
+      viewList: document.getElementById("viewList"),
+      viewRound: document.getElementById("viewRound"),
+      viewStats: document.getElementById("viewStats"),
+
+      addBar: document.getElementById("addBar"),
+      iosBar: document.getElementById("iosBar"),
+      addRoundBtn: document.getElementById("addRoundBtn"),
+
+      search: document.getElementById("searchInput"),
+      yearTabs: Array.from(document.querySelectorAll(".tablink[data-year]")),
+      tabCounts: Array.from(document.querySelectorAll(".tab-count")),
+
+      modalOverlay: document.getElementById("modalOverlay"),
+      modal: document.getElementById("modal"),
+      modalTitle: document.getElementById("modalTitle"),
+      cancelModal: document.getElementById("cancelModal"),
+      saveModal: document.getElementById("saveModal"),
+      fieldDate: document.getElementById("fieldDate"),
+      fieldLocation: document.getElementById("fieldLocation"),
+      fieldCompanions: document.getElementById("fieldCompanions"),
+      fieldExclude: document.getElementById("fieldExclude"),
+
+      holesRadio9: document.getElementById("holesRadio9"),
+      holesRadio18: document.getElementById("holesRadio18"),
+
+      backToList: document.getElementById("backToList"),
+      roundMetaTop: document.getElementById("roundMetaTop"),
+      roundLocation: document.getElementById("roundLocation"),
+      roundCompanions: document.getElementById("roundCompanions"),
+      roundTotal: document.getElementById("roundTotal"),
+      holesCountLabel: document.getElementById("holesCountLabel"),
+      holesGrid: document.getElementById("holesGrid"),
+      excludeToggle: document.getElementById("excludeToggle"),
+      resetScoresBtn: document.getElementById("resetScoresBtn"),
+      deleteRoundBtn: document.getElementById("deleteRoundBtn"),
+      editRoundBtn: document.getElementById("editRoundBtn"),
+
+      avg10: document.getElementById("avg10Value"),
+      best: document.getElementById("bestValue"),
+      worst: document.getElementById("worstValue"),
+      bestMeta: document.getElementById("bestMeta"),
+      worstMeta: document.getElementById("worstMeta"),
+      minValue: document.getElementById("minValue"),
+      maxValue: document.getElementById("maxValue"),
+      stdValue: document.getElementById("stdValue"),
+      histBars: document.getElementById("histBars"),
+      histLegend: document.getElementById("histLegend"),
+      histRange: document.getElementById("histRange"),
+      recentList: document.getElementById("recentList"),
+      recentCount: document.getElementById("recentCount"),
+
+      sheetOverlay: document.getElementById("sheetOverlay"),
+      sheet: document.getElementById("sheet"),
+      closeSheet: document.getElementById("closeSheet"),
+      sheetCourse: document.getElementById("sheetCourse"),
+      sheetHole: document.getElementById("sheetHole"),
+      sheetGrid: document.getElementById("sheetGrid")
+    };
+
+    function setTabActive(which){
+      const on = "bg-neutral-900 text-white";
+      const off = "bg-neutral-100 text-neutral-700";
+      if (which === "list"){
+        el.tabList.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${on}`;
+        el.tabStats.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${off}`;
+        el.tabHint.textContent = "Search / Filter";
+      } else {
+        el.tabList.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${off}`;
+        el.tabStats.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${on}`;
+        el.tabHint.textContent = "Recent 10 (excluded ignored)";
+      }
+    }
+
+    function renderTop(){
+      const a = avgAllNonExcluded();
+      el.avg.textContent = (a === null) ? "—" : fmtTotal(Number(a.toFixed(1)));
+
+      const isList = state.view === "list";
+      const isRound = state.view === "round";
+      const isStats = state.view === "stats";
+
+      el.listHeader.classList.toggle("hidden", !isList);
+      el.addBar.classList.toggle("hidden", !isList);
+
+      el.viewList.classList.toggle("hidden", !isList);
+      el.viewRound.classList.toggle("hidden", !isRound);
+      el.viewStats.classList.toggle("hidden", !isStats);
+
+      if (isList) {
+        el.title.textContent = "My Score Card";
+        el.subtitle.textContent = "Track rounds • Store locally";
+        setTabActive("list");
+      } else if (isStats) {
+        el.title.textContent = "Statistics";
+        el.subtitle.textContent = "Recent 10 • Best/Worst • Histogram";
+        setTabActive("stats");
+      } else {
+        el.title.textContent = "Round Score";
+        el.subtitle.textContent = "Tap a hole to enter relative score";
+      }
+
+      requestAnimationFrame(syncBottomBarHeight);
+    }
+
+    function filteredRounds(){
+      const thisY = new Date().getFullYear();
+      const yf = state.yearFilter;
+      return state.rounds
+        .slice()
+        .sort((a,b)=> new Date(b.date) - new Date(a.date))
+        .filter(r => {
+          const y = yearOf(r.date);
+          if (yf === "all") return true;
+          if (yf === "this") return y === thisY;
+          if (yf === "prev") return y < thisY;
+          return true;
+        })
+        .filter(r => {
+          const q = state.search.trim().toLowerCase();
+          if (!q) return true;
+          return (r.location||"").toLowerCase().includes(q) ||
+                 (r.companions||"").toLowerCase().includes(q);
+        });
+    }
+
+    function renderList(){
+      const list = filteredRounds();
+      if (!list.length){
+        el.viewList.innerHTML = `
+          <div class="rounded-2xl border bg-neutral-50 p-6 text-center text-neutral-600">
+            <div class="text-lg font-semibold">No rounds yet</div>
+            <div class="mt-2 text-sm">Tap “Add Round” to add your first round.</div>
+          </div>
+        `;
+        return;
+      }
+
+      el.viewList.innerHTML = list.map(r => {
+        const t = totalOf(r);
+        const d = new Date(r.date);
+        const mm = String(d.getMonth()+1).padStart(2,"0");
+        const dd = String(d.getDate()).padStart(2,"0");
+        return `
+          <button class="tap w-full text-left rounded-2xl border bg-white p-4 shadow-soft hover:bg-neutral-50"
+                  data-open="${r.id}">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-sm text-neutral-500">${mm}/${dd}/${d.getFullYear()}</div>
+                <div class="mt-1 text-lg font-semibold truncate">${escapeHtml(r.location || "—")}</div>
+                <div class="mt-1 text-sm text-neutral-600 truncate">${escapeHtml(r.companions || "")}</div>
+                ${r.exclude ? `<div class="mt-2 inline-flex text-[11px] px-2 py-1 rounded-full bg-neutral-100 text-neutral-600">Excluded</div>` : ``}
+              </div>
+              <div class="text-right">
+                <div class="text-2xl font-semibold tabular-nums">${fmtTotal(t)}</div>
+                <div class="text-xs text-neutral-500 mt-1">${r.holes || 18} holes</div>
+              </div>
+            </div>
+          </button>
+        `;
+      }).join("");
+
+      el.viewList.querySelectorAll("[data-open]").forEach(btn => {
+        btn.addEventListener("click", () => openRound(btn.dataset.open));
+      });
+    }
+
+    function renderRound(){
+      const r = state.rounds.find(x => x.id === state.activeId);
+      if (!r) { goList(); return; }
+
+      el.roundMetaTop.textContent = new Date(r.date).toLocaleDateString();
+      el.roundLocation.textContent = r.location || "—";
+      el.roundCompanions.textContent = r.companions ? r.companions : "—";
+      el.roundTotal.textContent = fmtTotal(totalOf(r));
+      el.holesCountLabel.textContent = `${r.holes || 18} holes`;
+      el.excludeToggle.checked = !!r.exclude;
+
+      const holes = r.holes || 18;
+      const scores = (r.scores && r.scores.length === holes) ? r.scores : Array.from({length:holes},()=>0);
+
+      el.holesGrid.innerHTML = scores.map((v, idx) => {
+        const holeNo = idx + 1;
+        const val = Number(v)||0;
+        const show = val>0?("+"+val):String(val);
+        return `
+          <button class="tap rounded-2xl border bg-white p-3 hover:bg-neutral-50" data-hole="${idx}">
+            <div class="text-[11px] text-neutral-500">Hole ${holeNo}</div>
+            <div class="mt-2 text-3xl font-semibold tabular-nums">${show}</div>
+          </button>
+        `;
+      }).join("");
+
+      el.holesGrid.querySelectorAll("[data-hole]").forEach(b => {
+        b.addEventListener("click", () => openSheet(Number(b.dataset.hole)));
+      });
+    }
+
+    function renderStats(){
+      const recent = recentNonExcluded(10);
+      el.recentCount.textContent = `${recent.length} / 10`;
+
+      if (!recent.length){
+        el.avg10.textContent = "—";
+        el.best.textContent = "—";
+        el.worst.textContent = "—";
+        el.bestMeta.textContent = "—";
+        el.worstMeta.textContent = "—";
+        el.minValue.textContent = "—";
+        el.maxValue.textContent = "—";
+        el.stdValue.textContent = "—";
+        el.histBars.innerHTML = `<div class="text-sm text-neutral-500">No data yet.</div>`;
+        el.histLegend.innerHTML = "";
+        el.histRange.textContent = "—";
+        el.recentList.innerHTML = `<div class="text-sm text-neutral-500">Add rounds to see stats.</div>`;
+        return;
+      }
+
+      const totals = recent.map(r => totalOf(r));
+      const avg10 = mean(totals);
+      el.avg10.textContent = fmtTotal(Number(avg10.toFixed(1)));
+
+      let best = recent[0], worst = recent[0];
+      recent.forEach(r => {
+        if (totalOf(r) < totalOf(best)) best = r;
+        if (totalOf(r) > totalOf(worst)) worst = r;
+      });
+
+      el.best.textContent = fmtTotal(totalOf(best));
+      el.worst.textContent = fmtTotal(totalOf(worst));
+      el.bestMeta.textContent = `${new Date(best.date).toLocaleDateString()} • ${best.location || "—"}`;
+      el.worstMeta.textContent = `${new Date(worst.date).toLocaleDateString()} • ${worst.location || "—"}`;
+
+      const minV = Math.min(...totals);
+      const maxV = Math.max(...totals);
+      el.minValue.textContent = fmtTotal(minV);
+      el.maxValue.textContent = fmtTotal(maxV);
+      el.stdValue.textContent = Number(stddev(totals).toFixed(1)).toString();
+
+      const hist = binHistogram(totals, 8);
+      el.histRange.textContent = `Range ${fmtTotal(hist.min)} → ${fmtTotal(hist.max)}`;
+
+      const maxCount = Math.max(...hist.bins.map(b => b.count), 1);
+      const H = 140;
+      el.histBars.innerHTML = hist.bins.map(b => {
+        const barPx = Math.max(6, Math.round((b.count / maxCount) * H));
+        return `
+          <div class="hist-col flex-1 flex flex-col items-center justify-end gap-2">
+            <div class="hist-bar bg-neutral-900/90" style="height:${barPx}px"></div>
+            <div class="text-[10px] text-neutral-500 text-center leading-tight">
+              ${escapeHtml(b.label)}
+              <div class="text-[10px] text-neutral-700 font-semibold tabular-nums">${b.count}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      el.histLegend.innerHTML = `
+        <span class="pill px-2 py-1 rounded-full">Bins: ${hist.bins.length}</span>
+        <span class="pill px-2 py-1 rounded-full">Total rounds: ${recent.length}</span>
+        <span class="pill px-2 py-1 rounded-full">Avg10: ${fmtTotal(Number(avg10.toFixed(1)))}</span>
+      `;
+
+      el.recentList.innerHTML = recent
+        .slice()
+        .sort((a,b)=> new Date(b.date) - new Date(a.date))
+        .map(r => {
+          const t = totalOf(r);
+          return `
+            <button class="tap w-full text-left rounded-2xl border p-3 hover:bg-neutral-50" data-open="${r.id}">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-xs text-neutral-500">${new Date(r.date).toLocaleDateString()}</div>
+                  <div class="text-sm font-semibold truncate">${escapeHtml(r.location || "—")}</div>
+                </div>
+                <div class="text-lg font-semibold tabular-nums">${fmtTotal(t)}</div>
+              </div>
+            </button>
+          `;
+        }).join("");
+
+      el.recentList.querySelectorAll("[data-open]").forEach(btn => {
+        btn.addEventListener("click", () => openRound(btn.dataset.open));
+      });
+    }
+
+    function goList(){
+      state.view = "list";
+      state.activeId = null;
+      el.iosBar.classList.remove("shrunk");
+      lastShrink = false;
+      render();
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    }
+    function goStats(){
+      state.view = "stats";
+      state.activeId = null;
+      render();
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    }
+    function openRound(id){
+      state.view = "round";
+      state.activeId = id;
+      render();
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    }
+
+    function openModal(mode, roundId=null){
+      state.editingId = roundId;
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+
+      if (mode === "create"){
+        el.modalTitle.textContent = "Create Round";
+        el.fieldDate.value = today;
+        el.fieldLocation.value = "";
+        el.fieldCompanions.value = "";
+        el.fieldExclude.checked = false;
+
+        state.modalHoles = 18;             // ✅ default
+        el.holesRadio18.checked = true;    // ✅ default UI
+        el.holesRadio9.checked = false;
+      } else {
+        const r = state.rounds.find(x=>x.id===roundId);
+        el.modalTitle.textContent = "Edit Round";
+        el.fieldDate.value = r?.date || today;
+        el.fieldLocation.value = r?.location || "";
+        el.fieldCompanions.value = r?.companions || "";
+        el.fieldExclude.checked = !!r?.exclude;
+
+        state.modalHoles = r?.holes || 18;
+        el.holesRadio18.checked = state.modalHoles === 18;
+        el.holesRadio9.checked  = state.modalHoles === 9;
+      }
+
+      el.modalOverlay.classList.remove("hidden");
+      el.modal.classList.remove("hidden");
+    }
+    function closeModal(){
+      el.modalOverlay.classList.add("hidden");
+      el.modal.classList.add("hidden");
+      state.editingId = null;
+    }
+
+    function saveModal(){
+      const date = el.fieldDate.value || "";
+      const location = el.fieldLocation.value.trim();
+      const companions = el.fieldCompanions.value.trim();
+      const exclude = el.fieldExclude.checked;
+
+      // ✅ read holes from radio (18 default)
+      const holes = (document.querySelector('input[name="holesCount"]:checked')?.value === "9") ? 9 : 18;
+
+      if (!date || !location){
+        alert("Date와 Location은 필수입니다.");
+        return;
+      }
+
+      if (!state.editingId){
+        const round = {
+          id: uid(),
+          date,
+          location,
+          companions,
+          holes,
+          scores: Array.from({length:holes},()=>0),
+          exclude,
+          createdAt: Date.now()
+        };
+        state.rounds.push(round);
+        save();
+        closeModal();
+        openRound(round.id);
+      } else {
+        const r = state.rounds.find(x=>x.id===state.editingId);
+        if (!r) return;
+
+        if ((r.holes||18) !== holes){
+          const prev = r.scores || [];
+          r.scores = Array.from({length:holes}, (_,i)=> Number(prev[i]||0));
+          r.holes = holes;
+        }
+
+        r.date = date;
+        r.location = location;
+        r.companions = companions;
+        r.exclude = exclude;
+
+        save();
+        closeModal();
+        render();
+      }
+    }
+
+    const SHEET_VALUES = [-3,-2,-1,0,1,2,3,4,5,6,7,8];
+    function openSheet(holeIndex){
+      const r = state.rounds.find(x=>x.id===state.activeId);
+      if (!r) return;
+
+      state.sheet.open = true;
+      state.sheet.holeIndex = holeIndex;
+
+      el.sheetCourse.textContent = r.location || "—";
+      el.sheetHole.textContent = `Hole ${holeIndex+1}`;
+
+      el.sheetGrid.innerHTML = SHEET_VALUES.map(v => `
+        <button class="tap py-5 rounded-2xl border text-2xl font-semibold bg-white hover:bg-neutral-50"
+                data-val="${v}">
+          ${v>0?("+"+v):v}
+        </button>
+      `).join("");
+
+      el.sheetGrid.querySelectorAll("[data-val]").forEach(btn => {
+        btn.addEventListener("click", () => setHoleScore(Number(btn.dataset.val)));
+      });
+
+      el.sheetOverlay.classList.remove("hidden");
+      el.sheet.classList.remove("hidden");
+    }
+    function closeSheet(){
+      state.sheet.open = false;
+      el.sheetOverlay.classList.add("hidden");
+      el.sheet.classList.add("hidden");
+    }
+    function setHoleScore(val){
+      const r = state.rounds.find(x=>x.id===state.activeId);
+      if (!r) return;
+      const i = state.sheet.holeIndex;
+
+      if (!Array.isArray(r.scores)) r.scores = Array.from({length:r.holes||18},()=>0);
+      r.scores[i] = val;
+
+      save();
+      closeSheet();
+      render();
+    }
+
+    // Events
+    el.tabList.addEventListener("click", () => goList());
+    el.tabStats.addEventListener("click", () => goStats());
+
+    el.addRoundBtn.addEventListener("click", () => openModal("create"));
+    el.search.addEventListener("input", () => { state.search = el.search.value; renderList(); });
+
+    el.yearTabs.forEach(btn => {
+      btn.addEventListener("click", () => {
+        state.yearFilter = btn.dataset.year;
+        el.yearTabs.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderList();
+      });
+    });
+
+    el.cancelModal.addEventListener("click", closeModal);
+    el.modalOverlay.addEventListener("click", closeModal);
+    el.saveModal.addEventListener("click", saveModal);
+
+    // ✅ keep state.modalHoles in sync (optional but nice)
+    el.holesRadio9.addEventListener("change", () => { if (el.holesRadio9.checked) state.modalHoles = 9; });
+    el.holesRadio18.addEventListener("change", () => { if (el.holesRadio18.checked) state.modalHoles = 18; });
+
+    el.backToList.addEventListener("click", goList);
+    el.editRoundBtn.addEventListener("click", () => openModal("edit", state.activeId));
+
+    el.excludeToggle.addEventListener("change", () => {
+      const r = state.rounds.find(x=>x.id===state.activeId);
+      if (!r) return;
+      r.exclude = el.excludeToggle.checked;
+      save();
+      render();
+    });
+
+    el.resetScoresBtn.addEventListener("click", () => {
+      const r = state.rounds.find(x=>x.id===state.activeId);
+      if (!r) return;
+      if (!confirm("Reset all hole scores to 0?")) return;
+      r.scores = Array.from({length:r.holes||18},()=>0);
+      save();
+      render();
+    });
+
+    el.deleteRoundBtn.addEventListener("click", () => {
+      const r = state.rounds.find(x=>x.id===state.activeId);
+      if (!r) return;
+      if (!confirm("Delete this round?")) return;
+      state.rounds = state.rounds.filter(x=>x.id!==state.activeId);
+      save();
+      goList();
+    });
+
+    el.closeSheet.addEventListener("click", closeSheet);
+    el.sheetOverlay.addEventListener("click", closeSheet);
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", () => requestAnimationFrame(syncBottomBarHeight));
+
+    function render(){
+      updateYearTabCounts();
+      renderTop();
+      if (state.view === "list") renderList();
+      if (state.view === "round") renderRound();
+      if (state.view === "stats") renderStats();
+      renderTop();
+      requestAnimationFrame(syncBottomBarHeight);
+    }
+
+    render();
+  </script>
+
+  <!-- For PWA START -->
+   <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js");
+      });
+    }
+  </script>
+  <!-- For PWA END -->
+
+</body>
+</html>
