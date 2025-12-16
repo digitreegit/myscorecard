@@ -10,16 +10,14 @@
     tailwind.config = { theme: { extend: { colors: { ink:"#0a0a0a" } } } }
   </script>
 
-  <!-- For PWA START -->
-   <link rel="manifest" href="/manifest.webmanifest" />
+  <!-- PWA START -->
+  <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#111111" />
-
-  <!-- iOS (Safari) home -->
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#111111">
-  <!-- For PWA END -->
+  <!-- PWA END -->
 
   <style>
     body { background:#f7f7f7; }
@@ -80,7 +78,6 @@
     }
     .tabsep { color: rgba(0,0,0,.18); user-select:none; }
 
-    /* radio row */
     .radio-card {
       border: 1px solid rgba(0,0,0,.12);
       border-radius: 14px;
@@ -95,6 +92,34 @@
       border-color: rgba(0,0,0,.9);
       box-shadow: 0 8px 24px rgba(0,0,0,.08);
     }
+
+    .selected-pill{
+      background-color:#0a0a0a !important;
+      color:#fff !important;
+      border-color:#0a0a0a !important;
+    }
+
+    @keyframes pulseSoft {
+      0% { box-shadow: 0 0 0 0 rgba(10,10,10,.18); }
+      100% { box-shadow: 0 0 0 14px rgba(10,10,10,0); }
+    }
+    .focus-pulse { animation: pulseSoft .7s ease-out; border-radius: 18px; }
+
+    @keyframes listIn {
+      0% { opacity: 0; transform: translateY(10px) scale(.99); }
+      60% { opacity: 1; transform: translateY(-2px) scale(1.002); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .list-animate-in { animation: listIn 420ms cubic-bezier(.2, 1.2, .2, 1); }
+
+    /* Spring pop for Done button */
+    @keyframes springPop {
+      0%   { transform: translateZ(0) scale(1); }
+      45%  { transform: translateZ(0) scale(1.08); }
+      75%  { transform: translateZ(0) scale(0.97); }
+      100% { transform: translateZ(0) scale(1); }
+    }
+    .spring-pop { animation: springPop 340ms cubic-bezier(.18, 1.2, .2, 1); }
   </style>
 </head>
 
@@ -109,21 +134,25 @@
         <div class="text-right">
           <div class="text-[11px] text-neutral-500">Average</div>
           <div class="text-lg font-semibold tabular-nums" id="avgValue">—</div>
+          <div class="text-[10px] text-neutral-400 mt-1" id="avgHint">Filtered • Excl. removed</div>
         </div>
       </div>
 
       <div class="mt-3 flex items-center gap-2">
         <button id="tabList" class="tap px-3 py-2 rounded-xl text-sm font-semibold bg-neutral-900 text-white">Rounds</button>
         <button id="tabStats" class="tap px-3 py-2 rounded-xl text-sm font-semibold bg-neutral-100 text-neutral-700">Stats</button>
+        <button id="tabSettings" class="tap px-3 py-2 rounded-xl text-sm font-semibold bg-neutral-100 text-neutral-700">Settings</button>
         <div class="ml-auto text-[11px] text-neutral-500" id="tabHint">Search / Filter</div>
       </div>
 
       <div id="listHeader" class="mt-3">
         <div class="flex items-center gap-2">
           <div class="flex-1 relative">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">🔎</span>
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+  <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+</svg></span>
             <input id="searchInput"
-              class="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-100 outline-none focus:ring-2 focus:ring-neutral-200"
+              class="w-full pl-11 pr-3 py-2 rounded-xl bg-neutral-100 outline-none focus:ring-2 focus:ring-neutral-200"
               placeholder="Search (course / companion)" />
           </div>
         </div>
@@ -155,16 +184,29 @@
         </div>
 
         <div class="rounded-2xl border bg-white p-4 shadow-soft">
-          <div class="flex items-start justify-between">
-            <div>
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
               <div class="text-xs text-neutral-500">Location</div>
-              <div class="text-lg font-semibold" id="roundLocation">—</div>
-              <div class="mt-1 text-sm text-neutral-600" id="roundCompanions">—</div>
+              <div class="text-lg font-semibold truncate" id="roundLocation">—</div>
+              <div class="mt-1 text-sm text-neutral-600 truncate" id="roundCompanions">—</div>
+
+              <div class="mt-3 flex items-center gap-2 flex-wrap">
+                <span class="pill px-2 py-1 rounded-full text-[11px] text-neutral-700" id="modeChip">Mode</span>
+                <span class="pill px-2 py-1 rounded-full text-[11px] text-neutral-700" id="holesChip">18 holes</span>
+              </div>
             </div>
+
             <div class="text-right">
               <div class="text-xs text-neutral-500">Total</div>
               <div class="text-3xl font-semibold tabular-nums" id="roundTotal">0</div>
               <div class="text-xs text-neutral-500 mt-1" id="holesCountLabel">18 holes</div>
+
+              <div class="mt-2 text-right">
+                <div class="text-[11px] text-neutral-500">Total Putts</div>
+                <div class="text-lg font-semibold tabular-nums" id="roundPutts">0</div>
+              </div>
+
+              <div id="scoreModeHint" class="text-[11px] text-neutral-500 mt-2">Mode set in Settings</div>
             </div>
           </div>
 
@@ -179,6 +221,21 @@
               <button id="resetScoresBtn" class="tap text-sm px-3 py-2 rounded-xl border hover:bg-neutral-50">Reset</button>
               <button id="deleteRoundBtn" class="tap text-sm px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50">Delete</button>
             </div>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-2xl border bg-white p-4 shadow-soft">
+          <div class="text-sm font-semibold">Notes</div>
+          <textarea id="roundNotes"
+            class="mt-2 w-full rounded-2xl border bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-neutral-200"
+            rows="3"
+            placeholder="Optional notes..."></textarea>
+
+          <div class="mt-3 flex justify-end gap-2">
+            <button id="btnSaveNotes"
+              class="tap px-4 py-2 rounded-xl bg-neutral-900 text-white text-sm font-semibold shadow-soft">
+              Save Notes
+            </button>
           </div>
         </div>
       </section>
@@ -253,12 +310,117 @@
           <div class="mt-3 space-y-2" id="recentList"></div>
         </div>
       </section>
+
+      <!-- SETTINGS -->
+      <section id="viewSettings" class="hidden space-y-4">
+
+        <!-- NEW: My Base -->
+        <div class="rounded-2xl border p-4 shadow-soft bg-white">
+          <div class="text-xs text-neutral-500">My Base</div>
+          <div class="text-lg font-semibold">Color reference (Par mode)</div>
+          <div class="text-xs text-neutral-500 mt-1">
+            If your base is +1 (Bogey), then +1 is gray, better is sky, worse is orange.
+          </div>
+
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <div class="text-sm font-semibold">Base score</div>
+            <select id="baseRelSelect"
+              class="tap px-3 py-2 rounded-xl border bg-white text-sm font-semibold outline-none focus:ring-2 focus:ring-neutral-200">
+              <option value="-3">-3</option>
+              <option value="-2">-2 (Eagle)</option>
+              <option value="-1">-1 (Birdie)</option>
+              <option value="0">0 (Par)</option>
+              <option value="1">+1 (Bogey)</option>
+              <option value="2">+2 (Double)</option>
+              <option value="3">+3 (Triple)</option>
+              <option value="4">+4</option>
+              <option value="5">+5</option>
+            </select>
+          </div>
+
+          <div class="mt-3 text-xs text-neutral-500" id="baseRelHint">—</div>
+        </div>
+        
+        <div class="rounded-2xl border p-4 shadow-soft bg-white">
+          <div class="text-xs text-neutral-500">Global Input Mode</div>
+          <div class="text-lg font-semibold">Par / Strokes</div>
+          <div class="text-xs text-neutral-500 mt-1">Applies to all rounds (input & display)</div>
+
+          <div class="mt-3 grid grid-cols-1 gap-2">
+            <label class="radio-card tap cursor-pointer">
+              <div class="flex items-center gap-2">
+                <input id="globalModePar" name="globalMode" type="radio" value="par" class="h-4 w-4" />
+                <span class="text-sm font-semibold">Par (relative)</span>
+              </div>
+              <span class="text-xs text-neutral-500">-3 ~ +8</span>
+            </label>
+
+            <label class="radio-card tap cursor-pointer">
+              <div class="flex items-center gap-2">
+                <input id="globalModeStroke" name="globalMode" type="radio" value="stroke" class="h-4 w-4" />
+                <span class="text-sm font-semibold">Strokes (raw)</span>
+              </div>
+              <span class="text-xs text-neutral-500">1 ~ 12</span>
+            </label>
+          </div>
+
+          <div class="mt-3 text-xs text-neutral-500" id="globalModeHint">—</div>
+        </div>
+
+        <div class="rounded-2xl border p-4 shadow-soft bg-white">
+          <div class="text-xs text-neutral-500">Average Calculation</div>
+          <div class="text-lg font-semibold">Which rounds to include</div>
+          <div class="text-xs text-neutral-500 mt-1">
+            Average uses the current list filter (All/This Year/Previous Years + Search) and excludes “Excluded” rounds.
+          </div>
+
+          <div class="mt-3 grid grid-cols-1 gap-2">
+            <label class="radio-card tap cursor-pointer">
+              <div class="flex items-center gap-2">
+                <input id="avgModePar" name="avgMode" type="radio" value="par" class="h-4 w-4" />
+                <span class="text-sm font-semibold">Average (Par rounds)</span>
+              </div>
+              <span class="text-xs text-neutral-500">Uses Par-only rounds</span>
+            </label>
+
+            <label class="radio-card tap cursor-pointer">
+              <div class="flex items-center gap-2">
+                <input id="avgModeStroke" name="avgMode" type="radio" value="stroke" class="h-4 w-4" />
+                <span class="text-sm font-semibold">Average (Strokes rounds)</span>
+              </div>
+              <span class="text-xs text-neutral-500">Uses Strokes-only rounds</span>
+            </label>
+          </div>
+
+          <div class="mt-3 text-xs text-neutral-500" id="avgModeHint">—</div>
+        </div>
+
+        <div class="rounded-2xl border p-4 shadow-soft bg-white">
+          <div class="text-xs text-neutral-500">Data Backup</div>
+          <div class="text-lg font-semibold">Backup / Restore (JSON)</div>
+          <div class="text-xs text-neutral-500 mt-1">Move data to another device</div>
+
+          <div class="mt-3 space-y-2">
+            <button id="btnDownloadJSON"
+              class="tap w-full py-3 rounded-xl bg-neutral-900 text-white font-semibold shadow-soft">
+              Download Backup (JSON)
+            </button>
+            <input id="restoreFile" type="file" accept=".json" class="w-full px-3 py-3 rounded-xl border text-sm bg-white" />
+            <button id="btnRestoreJSON"
+              class="tap w-full py-3 rounded-xl border border-red-200 text-red-600 font-semibold hover:bg-red-50">
+              Restore from JSON
+            </button>
+            <div class="text-xs text-neutral-500">⚠ Restore overwrites existing data.</div>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <div id="addBar" class="bottom-fixed hidden">
+    <div id="addBar" class="bottom-fixed">
       <div class="bar-inner ios-shrink" id="iosBar">
         <button id="addRoundBtn"
-          class="tap w-full py-3 my-8 rounded-2xl bg-neutral-900 text-white font-semibold shadow-soft flex items-center justify-center gap-2">
+          class="tap w-full py-3 rounded-2xl bg-neutral-900 text-white font-semibold shadow-soft flex items-center justify-center gap-2"
+          style="margin-bottom:20px;">
           <span class="text-xl leading-none">+</span>
           <span>Add Round</span>
         </button>
@@ -266,14 +428,14 @@
     </div>
   </div>
 
-  <!-- CREATE/EDIT MODAL -->
+  <!-- ADD/EDIT MODAL -->
   <div id="modalOverlay" class="hidden fixed inset-0 bg-black/40 z-40"></div>
   <div id="modal"
     class="hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(92vw,420px)]">
     <div class="rounded-2xl bg-white shadow-soft border overflow-hidden">
       <div class="px-4 py-3 border-b flex items-center justify-between">
         <button id="cancelModal" class="tap text-sm text-neutral-600">Cancel</button>
-        <div class="text-sm font-semibold" id="modalTitle">Create Round</div>
+        <div class="text-sm font-semibold" id="modalTitle">Add Round</div>
         <button id="saveModal" class="tap text-sm font-semibold">Save</button>
       </div>
 
@@ -296,7 +458,6 @@
             class="mt-1 w-full px-3 py-3 rounded-xl bg-white border outline-none focus:ring-2 focus:ring-neutral-200" />
         </div>
 
-        <!-- ✅ Radio buttons (18 default) -->
         <div>
           <label class="text-xs text-neutral-500">Number of Holes</label>
 
@@ -327,99 +488,204 @@
     </div>
   </div>
 
-  <!-- HOLE SCORE SHEET -->
+  <!-- HOLE SCORE + PUTTS SHEET -->
   <div id="sheetOverlay" class="hidden fixed inset-0 bg-black/35 z-40"></div>
   <div id="sheet" class="hidden fixed left-0 right-0 bottom-0 z-50">
     <div class="max-w-md mx-auto">
       <div class="rounded-t-3xl bg-white border shadow-soft p-5">
         <div class="flex items-center justify-between">
           <button id="closeSheet" class="tap text-xl leading-none text-neutral-500">×</button>
+
           <div class="text-center flex-1">
             <div class="text-sm text-neutral-500" id="sheetCourse">—</div>
             <div class="text-2xl font-semibold" id="sheetHole">Hole —</div>
+
+            <div class="mt-2 flex items-center justify-center gap-2">
+              <span class="text-[11px] text-neutral-500">Selected:</span>
+              <span id="summaryScore" class="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold bg-white">Score: —</span>
+              <span id="summaryPutts" class="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold bg-white">Putts: —</span>
+            </div>
           </div>
-          <div class="w-8"></div>
+
+          <button id="doneSheetBtn"
+            class="tap text-sm font-semibold px-3 py-1.5 rounded-xl border hover:bg-neutral-50">
+            Done
+          </button>
         </div>
 
-        <div class="mt-5 grid grid-cols-3 gap-3" id="sheetGrid"></div>
+        <div class="mt-5">
+          <div class="text-xs text-neutral-500">Score</div>
+          <div class="mt-2 grid grid-cols-4 gap-2" id="sheetScoreGrid"></div>
+          <div class="mt-2 text-[11px] text-neutral-500" id="sheetNote"></div>
+        </div>
 
-        <div class="mt-4 text-center text-xs text-neutral-500">
-          The input value is the relative score compared to par (under/over).
+        <div class="mt-4" id="puttsSection">
+          <div class="text-xs text-neutral-500">Putts</div>
+          <div class="mt-2 grid grid-cols-7 gap-2" id="sheetPuttsGrid"></div>
+          <div class="mt-2 text-[11px] text-neutral-500">Tip: 0 can mean “not recorded”.</div>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    const KEY = "golf_score_rounds_v1";
+    const KEY_V1 = "golf_score_rounds_v1";
+    const KEY_V2 = "golf_score_rounds_v2";
+    const KEY_V3 = "golf_score_rounds_v3";
+    const KEY_SETTINGS = "golf_score_settings_v3";
+
+    // NEW: baseRel (My Base) default is 0
+    const DEFAULT_SETTINGS = { globalMode: "par", avgMode: "par", baseRel: 0 };
+
     const state = {
-      rounds: load(),
+      rounds: loadMerged(),
+      settings: loadSettings(),
       view: "list",
       activeId: null,
       yearFilter: "all",
       search: "",
       editingId: null,
-      modalHoles: 18, // ✅ default 18
-      sheet: { open:false, holeIndex:0 }
+      sheet: { open:false, holeIndex:0, focusPutts:false }
     };
 
-    function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } }
-    function save(){ localStorage.setItem(KEY, JSON.stringify(state.rounds)); }
-    function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
-
-    function fmtTotal(n){ return n > 0 ? "+" + n : String(n); }
-    function totalOf(round){ return (round.scores || []).reduce((a,b)=>a + (Number(b)||0), 0); }
-    function avgAllNonExcluded(){
-      const arr = state.rounds.filter(r => !r.exclude);
-      if (!arr.length) return null;
-      const sum = arr.reduce((acc,r)=> acc + totalOf(r), 0);
-      return sum / arr.length;
+    function loadJSON(key){
+      try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
     }
+
+    function clampInt(n, min, max){
+      const v = Number.parseInt(n, 10);
+      if (Number.isNaN(v)) return min;
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function loadSettings(){
+      try {
+        const raw = JSON.parse(localStorage.getItem(KEY_SETTINGS) || "null");
+        const s = Object.assign({}, DEFAULT_SETTINGS, raw || {});
+        if (s.globalMode !== "par" && s.globalMode !== "stroke") s.globalMode = "par";
+        if (s.avgMode !== "par" && s.avgMode !== "stroke") s.avgMode = "par";
+        // baseRel allowed range: -3..+5 (matches UI)
+        s.baseRel = clampInt(s.baseRel, -3, 5);
+        return s;
+      } catch {
+        return Object.assign({}, DEFAULT_SETTINGS);
+      }
+    }
+
+    function saveSettings(){ localStorage.setItem(KEY_SETTINGS, JSON.stringify(state.settings)); }
+    function save(){ localStorage.setItem(KEY_V3, JSON.stringify(state.rounds)); }
+
+    function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
     function yearOf(dateStr){ return new Date(dateStr).getFullYear(); }
+    function pad2(n){ return String(n).padStart(2,"0"); }
+    function toISODate(d){
+      const dt = (d instanceof Date) ? d : new Date(d);
+      return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
+    }
+    function fmtTotalRel(n){ return n > 0 ? "+" + n : String(n); }
     function escapeHtml(s){
       return String(s)
         .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
         .replaceAll('"',"&quot;").replaceAll("'","&#039;");
     }
 
-    let lastShrink = false;
-    function onScroll(){
-      if (state.view !== "list") return;
-      const y = window.scrollY || document.documentElement.scrollTop || 0;
-      const shrink = y > 14;
-      if (shrink !== lastShrink){
-        el.iosBar.classList.toggle("shrunk", shrink);
-        lastShrink = shrink;
+    function ensureRoundShape(r){
+      const holes = r.holes || 18;
+
+      if (Array.isArray(r.scores) && !Array.isArray(r.relScores)) r.relScores = r.scores.slice(0, holes).map(x => Number(x)||0);
+      if (r.location && !r.course) r.course = r.location;
+      if (r.companions && !r.companion) r.companion = r.companions;
+
+      if (!Array.isArray(r.relScores)) r.relScores = Array.from({length:holes}, ()=>0);
+      if (!Array.isArray(r.strokeScores)) r.strokeScores = Array.from({length:holes}, ()=>0);
+      if (!Array.isArray(r.putts)) r.putts = Array.from({length:holes}, ()=>0);
+
+      r.relScores = Array.from({length:holes}, (_,i)=> Number(r.relScores[i] ?? 0));
+      r.strokeScores = Array.from({length:holes}, (_,i)=> Number(r.strokeScores[i] ?? 0));
+      r.putts = Array.from({length:holes}, (_,i)=> Number(r.putts[i] ?? 0));
+
+      if (typeof r.notes !== "string") r.notes = "";
+
+      if (r.entryMode !== "par" && r.entryMode !== "stroke") {
+        const anyStroke = r.strokeScores.some(v => Number(v) > 0);
+        const anyRel = r.relScores.some(v => Number(v) !== 0);
+        r.entryMode = (anyStroke && !anyRel) ? "stroke" : "par";
       }
-    }
-    function syncBottomBarHeight(){
-      if (el.addBar.classList.contains("hidden")) {
-        document.documentElement.style.setProperty("--bar-h", "0px");
-        return;
-      }
-      const h = el.addBar.getBoundingClientRect().height;
-      document.documentElement.style.setProperty("--bar-h", `${Math.ceil(h)}px`);
+
+      if (typeof r.exclude !== "boolean") r.exclude = false;
+      if (!r.course) r.course = "";
+      if (!r.companion) r.companion = "";
+      if (!r.date) r.date = toISODate(new Date());
+
+      delete r.scores; delete r.location; delete r.companions; delete r.scoreMode;
     }
 
-    function updateYearTabCounts(){
+    function loadMerged(){
+      const v3 = loadJSON(KEY_V3);
+      if (Array.isArray(v3) && v3.length) { v3.forEach(ensureRoundShape); return v3; }
+      const v2 = loadJSON(KEY_V2);
+      if (Array.isArray(v2) && v2.length) { v2.forEach(ensureRoundShape); localStorage.setItem(KEY_V3, JSON.stringify(v2)); return v2; }
+      const v1 = loadJSON(KEY_V1);
+      if (Array.isArray(v1) && v1.length) { v1.forEach(ensureRoundShape); localStorage.setItem(KEY_V3, JSON.stringify(v1)); return v1; }
+      return [];
+    }
+
+    function globalMode(){ return state.settings.globalMode; }
+    function baseRel(){ return clampInt(state.settings.baseRel, -3, 5); }
+
+    function totalScore(r, mode){
+      const arr = (mode === "stroke") ? r.strokeScores : r.relScores;
+      return arr.reduce((a,b)=>a + (Number(b)||0), 0);
+    }
+    function totalPutts(r){ return (r.putts || []).reduce((a,b)=>a + (Number(b)||0), 0); }
+    function anyStrokeEntered(r){ return (r.strokeScores || []).some(v => Number(v) > 0); }
+
+    // NEW: base-aware color for Par mode
+    function relColorClass(rel){
+      const b = baseRel();
+      if (rel < b) return "text-sky-600";
+      if (rel === b) return "text-gray-600";
+      return "text-orange-600";
+    }
+
+    function filteredRounds(){
       const thisY = new Date().getFullYear();
-      const allCount = state.rounds.length;
-      const thisCount = state.rounds.filter(r => yearOf(r.date) === thisY).length;
-      const prevCount = state.rounds.filter(r => yearOf(r.date) < thisY).length;
-      const map = { all: allCount, this: thisCount, prev: prevCount };
-      el.tabCounts.forEach(span => {
-        const k = span.dataset.count;
-        span.textContent = `(${map[k] ?? 0})`;
-      });
+      const yf = state.yearFilter;
+
+      return state.rounds.slice().sort((a,b)=> new Date(b.date) - new Date(a.date))
+        .filter(r => {
+          const y = yearOf(r.date);
+          if (yf === "all") return true;
+          if (yf === "this") return y === thisY;
+          if (yf === "prev") return y < thisY;
+          return true;
+        })
+        .filter(r => {
+          const q = state.search.trim().toLowerCase();
+          if (!q) return true;
+          return (r.course||"").toLowerCase().includes(q) || (r.companion||"").toLowerCase().includes(q);
+        });
     }
 
-    function recentNonExcluded(limit=10){
-      return state.rounds
-        .filter(r => !r.exclude)
-        .slice()
-        .sort((a,b)=> new Date(b.date) - new Date(a.date))
-        .slice(0, limit);
+    function averageForVisibleList(){
+      const mode = state.settings.avgMode;
+      const vis = filteredRounds().filter(r => !r.exclude && r.entryMode === mode);
+      if (!vis.length) return null;
+      const sum = vis.reduce((acc,r)=> acc + totalScore(r, mode), 0);
+      return sum / vis.length;
     }
+
+    function cardScoreDisplay(r){
+      const mode = globalMode();
+      if (mode === "par"){
+        const t = totalScore(r, "par");
+        return { text: fmtTotalRel(t), cls: relColorClass(t) };
+      }
+      const hasAny = anyStrokeEntered(r);
+      if (!hasAny) return { text: "—", cls: "text-neutral-400" };
+      return { text: String(totalScore(r, "stroke")), cls: "text-neutral-900" };
+    }
+
     function mean(nums){ return nums.length ? nums.reduce((a,b)=>a+b,0)/nums.length : null; }
     function stddev(nums){
       if (nums.length < 2) return 0;
@@ -433,10 +699,8 @@
       const maxV = Math.max(...values);
 
       if (minV === maxV){
-        return {
-          min:minV, max:maxV, step:1, start:minV, end:maxV+1,
-          bins:[{ min:minV, max:maxV, count:values.length, label:`${fmtTotal(minV)}` }]
-        };
+        return { min:minV, max:maxV, step:1, start:minV, end:maxV+1,
+          bins:[{ min:minV, max:maxV, count:values.length, label:`${fmtTotalRel(minV)}` }] };
       }
 
       const span = maxV - minV;
@@ -446,15 +710,13 @@
 
       const bins = [];
       for (let b = start; b < end; b += step){
-        const minB = b;
-        const maxB = b + step - 1;
-        bins.push({ min:minB, max:maxB, count:0, label:`${fmtTotal(minB)}~${fmtTotal(maxB)}` });
+        const minB = b, maxB = b + step - 1;
+        bins.push({ min:minB, max:maxB, count:0, label:`${fmtTotalRel(minB)}~${fmtTotalRel(maxB)}` });
       }
       values.forEach(v => {
         const idx = Math.min(bins.length-1, Math.floor((v - start) / step));
         bins[idx].count++;
       });
-
       return { bins, min:minV, max:maxV, step, start, end };
     }
 
@@ -462,15 +724,18 @@
       title: document.getElementById("title"),
       subtitle: document.getElementById("subtitle"),
       avg: document.getElementById("avgValue"),
+      avgHint: document.getElementById("avgHint"),
 
       tabList: document.getElementById("tabList"),
       tabStats: document.getElementById("tabStats"),
+      tabSettings: document.getElementById("tabSettings"),
       tabHint: document.getElementById("tabHint"),
 
       listHeader: document.getElementById("listHeader"),
       viewList: document.getElementById("viewList"),
       viewRound: document.getElementById("viewRound"),
       viewStats: document.getElementById("viewStats"),
+      viewSettings: document.getElementById("viewSettings"),
 
       addBar: document.getElementById("addBar"),
       iosBar: document.getElementById("iosBar"),
@@ -489,7 +754,6 @@
       fieldLocation: document.getElementById("fieldLocation"),
       fieldCompanions: document.getElementById("fieldCompanions"),
       fieldExclude: document.getElementById("fieldExclude"),
-
       holesRadio9: document.getElementById("holesRadio9"),
       holesRadio18: document.getElementById("holesRadio18"),
 
@@ -498,12 +762,20 @@
       roundLocation: document.getElementById("roundLocation"),
       roundCompanions: document.getElementById("roundCompanions"),
       roundTotal: document.getElementById("roundTotal"),
+      roundPutts: document.getElementById("roundPutts"),
       holesCountLabel: document.getElementById("holesCountLabel"),
       holesGrid: document.getElementById("holesGrid"),
       excludeToggle: document.getElementById("excludeToggle"),
       resetScoresBtn: document.getElementById("resetScoresBtn"),
       deleteRoundBtn: document.getElementById("deleteRoundBtn"),
       editRoundBtn: document.getElementById("editRoundBtn"),
+
+      modeChip: document.getElementById("modeChip"),
+      holesChip: document.getElementById("holesChip"),
+      scoreModeHint: document.getElementById("scoreModeHint"),
+
+      roundNotes: document.getElementById("roundNotes"),
+      btnSaveNotes: document.getElementById("btnSaveNotes"),
 
       avg10: document.getElementById("avg10Value"),
       best: document.getElementById("bestValue"),
@@ -519,35 +791,93 @@
       recentList: document.getElementById("recentList"),
       recentCount: document.getElementById("recentCount"),
 
+      globalModePar: document.getElementById("globalModePar"),
+      globalModeStroke: document.getElementById("globalModeStroke"),
+      avgModePar: document.getElementById("avgModePar"),
+      avgModeStroke: document.getElementById("avgModeStroke"),
+      globalModeHint: document.getElementById("globalModeHint"),
+      avgModeHint: document.getElementById("avgModeHint"),
+
+      // NEW: My Base
+      baseRelSelect: document.getElementById("baseRelSelect"),
+      baseRelHint: document.getElementById("baseRelHint"),
+
+      btnDownloadJSON: document.getElementById("btnDownloadJSON"),
+      restoreFile: document.getElementById("restoreFile"),
+      btnRestoreJSON: document.getElementById("btnRestoreJSON"),
+
       sheetOverlay: document.getElementById("sheetOverlay"),
       sheet: document.getElementById("sheet"),
       closeSheet: document.getElementById("closeSheet"),
+      doneSheetBtn: document.getElementById("doneSheetBtn"),
       sheetCourse: document.getElementById("sheetCourse"),
       sheetHole: document.getElementById("sheetHole"),
-      sheetGrid: document.getElementById("sheetGrid")
+      sheetScoreGrid: document.getElementById("sheetScoreGrid"),
+      sheetPuttsGrid: document.getElementById("sheetPuttsGrid"),
+      sheetNote: document.getElementById("sheetNote"),
+      puttsSection: document.getElementById("puttsSection"),
+      summaryScore: document.getElementById("summaryScore"),
+      summaryPutts: document.getElementById("summaryPutts"),
     };
+
+    function springTap(btn){
+      btn.classList.remove("spring-pop");
+      void btn.offsetWidth;
+      btn.classList.add("spring-pop");
+      btn.addEventListener("animationend", () => btn.classList.remove("spring-pop"), { once:true });
+    }
+
+    let lastShrink = false;
+    function onScroll(){
+      if (state.view !== "list") return;
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      const shrink = y > 14;
+      if (shrink !== lastShrink){
+        el.iosBar.classList.toggle("shrunk", shrink);
+        lastShrink = shrink;
+      }
+    }
+    function syncBottomBarHeight(){
+      const h = el.addBar.getBoundingClientRect().height;
+      document.documentElement.style.setProperty("--bar-h", `${Math.ceil(h)}px`);
+    }
+
+    function updateYearTabCounts(){
+      const thisY = new Date().getFullYear();
+      const allCount = state.rounds.length;
+      const thisCount = state.rounds.filter(r => yearOf(r.date) === thisY).length;
+      const prevCount = state.rounds.filter(r => yearOf(r.date) < thisY).length;
+      const map = { all: allCount, this: thisCount, prev: prevCount };
+      el.tabCounts.forEach(span => { span.textContent = `(${map[span.dataset.count] ?? 0})`; });
+    }
 
     function setTabActive(which){
       const on = "bg-neutral-900 text-white";
       const off = "bg-neutral-100 text-neutral-700";
-      if (which === "list"){
-        el.tabList.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${on}`;
-        el.tabStats.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${off}`;
-        el.tabHint.textContent = "Search / Filter";
-      } else {
-        el.tabList.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${off}`;
-        el.tabStats.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${on}`;
-        el.tabHint.textContent = "Recent 10 (excluded ignored)";
-      }
+      el.tabList.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${which==="list"?on:off}`;
+      el.tabStats.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${which==="stats"?on:off}`;
+      el.tabSettings.className = `tap px-3 py-2 rounded-xl text-sm font-semibold ${which==="settings"?on:off}`;
+      el.tabHint.textContent = which==="list" ? "Search / Filter" : (which==="stats" ? "Recent 10 (excluded ignored)" : "App preferences");
+    }
+
+    function animateList(){
+      el.viewList.classList.remove("list-animate-in");
+      void el.viewList.offsetWidth;
+      el.viewList.classList.add("list-animate-in");
     }
 
     function renderTop(){
-      const a = avgAllNonExcluded();
-      el.avg.textContent = (a === null) ? "—" : fmtTotal(Number(a.toFixed(1)));
+      const a = averageForVisibleList();
+      const avgMode = state.settings.avgMode;
+      el.avg.textContent = (a === null)
+        ? "—"
+        : (avgMode === "par" ? fmtTotalRel(Number(a.toFixed(1))) : String(Number(a.toFixed(1))));
+      el.avgHint.textContent = `Filtered • Excl. removed • Avg: ${avgMode === "par" ? "Par rounds" : "Strokes rounds"}`;
 
       const isList = state.view === "list";
       const isRound = state.view === "round";
       const isStats = state.view === "stats";
+      const isSettings = state.view === "settings";
 
       el.listHeader.classList.toggle("hidden", !isList);
       el.addBar.classList.toggle("hidden", !isList);
@@ -555,6 +885,7 @@
       el.viewList.classList.toggle("hidden", !isList);
       el.viewRound.classList.toggle("hidden", !isRound);
       el.viewStats.classList.toggle("hidden", !isStats);
+      el.viewSettings.classList.toggle("hidden", !isSettings);
 
       if (isList) {
         el.title.textContent = "My Score Card";
@@ -564,33 +895,16 @@
         el.title.textContent = "Statistics";
         el.subtitle.textContent = "Recent 10 • Best/Worst • Histogram";
         setTabActive("stats");
+      } else if (isSettings) {
+        el.title.textContent = "Settings";
+        el.subtitle.textContent = "Mode • Base • Average • Backup";
+        setTabActive("settings");
       } else {
         el.title.textContent = "Round Score";
-        el.subtitle.textContent = "Tap a hole to enter relative score";
+        el.subtitle.textContent = "Tap a hole to enter score + putts";
       }
 
       requestAnimationFrame(syncBottomBarHeight);
-    }
-
-    function filteredRounds(){
-      const thisY = new Date().getFullYear();
-      const yf = state.yearFilter;
-      return state.rounds
-        .slice()
-        .sort((a,b)=> new Date(b.date) - new Date(a.date))
-        .filter(r => {
-          const y = yearOf(r.date);
-          if (yf === "all") return true;
-          if (yf === "this") return y === thisY;
-          if (yf === "prev") return y < thisY;
-          return true;
-        })
-        .filter(r => {
-          const q = state.search.trim().toLowerCase();
-          if (!q) return true;
-          return (r.location||"").toLowerCase().includes(q) ||
-                 (r.companions||"").toLowerCase().includes(q);
-        });
     }
 
     function renderList(){
@@ -606,22 +920,28 @@
       }
 
       el.viewList.innerHTML = list.map(r => {
-        const t = totalOf(r);
+        const disp = cardScoreDisplay(r);
         const d = new Date(r.date);
         const mm = String(d.getMonth()+1).padStart(2,"0");
         const dd = String(d.getDate()).padStart(2,"0");
+        const modeBadge = (globalMode() === "stroke")
+          ? `<span class="mt-2 inline-flex text-[11px] px-2 py-1 rounded-full bg-neutral-100 text-neutral-700">Strokes</span>`
+          : `<span class="mt-2 inline-flex text-[11px] px-2 py-1 rounded-full bg-neutral-100 text-neutral-700">Par</span>`;
+
         return `
-          <button class="tap w-full text-left rounded-2xl border bg-white p-4 shadow-soft hover:bg-neutral-50"
-                  data-open="${r.id}">
+          <button class="tap w-full text-left rounded-2xl border bg-white p-4 shadow-soft hover:bg-neutral-50" data-open="${r.id}">
             <div class="flex items-start justify-between gap-4">
               <div class="min-w-0">
                 <div class="text-sm text-neutral-500">${mm}/${dd}/${d.getFullYear()}</div>
-                <div class="mt-1 text-lg font-semibold truncate">${escapeHtml(r.location || "—")}</div>
-                <div class="mt-1 text-sm text-neutral-600 truncate">${escapeHtml(r.companions || "")}</div>
-                ${r.exclude ? `<div class="mt-2 inline-flex text-[11px] px-2 py-1 rounded-full bg-neutral-100 text-neutral-600">Excluded</div>` : ``}
+                <div class="mt-1 text-lg font-semibold truncate">${escapeHtml(r.course || "—")}</div>
+                <div class="mt-1 text-sm text-neutral-600 truncate">${escapeHtml(r.companion || "")}</div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  ${r.exclude ? `<span class="mt-2 inline-flex text-[11px] px-2 py-1 rounded-full bg-neutral-100 text-neutral-600">Excluded</span>` : ``}
+                  ${modeBadge}
+                </div>
               </div>
               <div class="text-right">
-                <div class="text-2xl font-semibold tabular-nums">${fmtTotal(t)}</div>
+                <div class="text-2xl font-semibold tabular-nums ${disp.cls}">${disp.text}</div>
                 <div class="text-xs text-neutral-500 mt-1">${r.holes || 18} holes</div>
               </div>
             </div>
@@ -637,25 +957,50 @@
     function renderRound(){
       const r = state.rounds.find(x => x.id === state.activeId);
       if (!r) { goList(); return; }
+      ensureRoundShape(r);
 
       el.roundMetaTop.textContent = new Date(r.date).toLocaleDateString();
-      el.roundLocation.textContent = r.location || "—";
-      el.roundCompanions.textContent = r.companions ? r.companions : "—";
-      el.roundTotal.textContent = fmtTotal(totalOf(r));
+      el.roundLocation.textContent = r.course || "—";
+      el.roundCompanions.textContent = r.companion ? r.companion : "—";
+
+      const mode = globalMode();
+      el.modeChip.textContent = mode === "stroke" ? "Strokes" : "Par";
+      el.scoreModeHint.textContent = `Mode: ${mode === "stroke" ? "Strokes" : "Par"} (set in Settings)`;
+
+      const total = totalScore(r, mode);
+      el.roundTotal.textContent = (mode === "stroke") ? String(total) : fmtTotalRel(total);
+      el.roundTotal.className = `text-3xl font-semibold tabular-nums ${mode==="par" ? relColorClass(total) : "text-neutral-900"}`;
+
+      el.roundPutts.textContent = String(totalPutts(r));
+
       el.holesCountLabel.textContent = `${r.holes || 18} holes`;
+      el.holesChip.textContent = `${r.holes || 18} holes`;
       el.excludeToggle.checked = !!r.exclude;
 
       const holes = r.holes || 18;
-      const scores = (r.scores && r.scores.length === holes) ? r.scores : Array.from({length:holes},()=>0);
+      const scores = (mode === "stroke") ? r.strokeScores : r.relScores;
 
-      el.holesGrid.innerHTML = scores.map((v, idx) => {
+      el.holesGrid.innerHTML = Array.from({length:holes}, (_,idx) => {
         const holeNo = idx + 1;
-        const val = Number(v)||0;
-        const show = val>0?("+"+val):String(val);
+        const val = Number(scores[idx] || 0);
+        const putt = Number(r.putts[idx] || 0);
+
+        const showScore = (mode === "stroke")
+          ? (val > 0 ? String(val) : "—")
+          : (val > 0 ? ("+"+val) : String(val));
+
+        const scoreCls = (mode === "par") ? relColorClass(val) : "text-neutral-900";
+        const dimClass = (mode === "stroke" && val === 0) ? "opacity-50" : "";
+
+        const puttLabel = putt > 0 ? String(putt) : "—";
+
         return `
-          <button class="tap rounded-2xl border bg-white p-3 hover:bg-neutral-50" data-hole="${idx}">
-            <div class="text-[11px] text-neutral-500">Hole ${holeNo}</div>
-            <div class="mt-2 text-3xl font-semibold tabular-nums">${show}</div>
+          <button class="tap rounded-2xl border bg-white p-3 hover:bg-neutral-50 ${dimClass}" data-hole="${idx}">
+            <div class="flex items-center justify-between">
+              <div class="text-[11px] text-neutral-500">Hole ${holeNo}</div>
+              <div class="text-[11px] text-neutral-500">Putts: <span class="font-semibold tabular-nums">${puttLabel}</span></div>
+            </div>
+            <div class="mt-2 text-3xl font-semibold tabular-nums ${scoreCls}">${showScore}</div>
           </button>
         `;
       }).join("");
@@ -663,6 +1008,12 @@
       el.holesGrid.querySelectorAll("[data-hole]").forEach(b => {
         b.addEventListener("click", () => openSheet(Number(b.dataset.hole)));
       });
+
+      el.roundNotes.value = r.notes || "";
+    }
+
+    function recentNonExcluded(limit=10){
+      return state.rounds.filter(r => !r.exclude).slice().sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0, limit);
     }
 
     function renderStats(){
@@ -685,29 +1036,29 @@
         return;
       }
 
-      const totals = recent.map(r => totalOf(r));
+      const totals = recent.map(r => totalScore(r, "par"));
       const avg10 = mean(totals);
-      el.avg10.textContent = fmtTotal(Number(avg10.toFixed(1)));
+      el.avg10.textContent = fmtTotalRel(Number(avg10.toFixed(1)));
 
       let best = recent[0], worst = recent[0];
       recent.forEach(r => {
-        if (totalOf(r) < totalOf(best)) best = r;
-        if (totalOf(r) > totalOf(worst)) worst = r;
+        if (totalScore(r, "par") < totalScore(best, "par")) best = r;
+        if (totalScore(r, "par") > totalScore(worst, "par")) worst = r;
       });
 
-      el.best.textContent = fmtTotal(totalOf(best));
-      el.worst.textContent = fmtTotal(totalOf(worst));
-      el.bestMeta.textContent = `${new Date(best.date).toLocaleDateString()} • ${best.location || "—"}`;
-      el.worstMeta.textContent = `${new Date(worst.date).toLocaleDateString()} • ${worst.location || "—"}`;
+      el.best.textContent = fmtTotalRel(totalScore(best, "par"));
+      el.worst.textContent = fmtTotalRel(totalScore(worst, "par"));
+      el.bestMeta.textContent = `${new Date(best.date).toLocaleDateString()} • ${best.course || "—"}`;
+      el.worstMeta.textContent = `${new Date(worst.date).toLocaleDateString()} • ${worst.course || "—"}`;
 
       const minV = Math.min(...totals);
       const maxV = Math.max(...totals);
-      el.minValue.textContent = fmtTotal(minV);
-      el.maxValue.textContent = fmtTotal(maxV);
+      el.minValue.textContent = fmtTotalRel(minV);
+      el.maxValue.textContent = fmtTotalRel(maxV);
       el.stdValue.textContent = Number(stddev(totals).toFixed(1)).toString();
 
       const hist = binHistogram(totals, 8);
-      el.histRange.textContent = `Range ${fmtTotal(hist.min)} → ${fmtTotal(hist.max)}`;
+      el.histRange.textContent = `Range ${fmtTotalRel(hist.min)} → ${fmtTotalRel(hist.max)}`;
 
       const maxCount = Math.max(...hist.bins.map(b => b.count), 1);
       const H = 140;
@@ -727,22 +1078,22 @@
       el.histLegend.innerHTML = `
         <span class="pill px-2 py-1 rounded-full">Bins: ${hist.bins.length}</span>
         <span class="pill px-2 py-1 rounded-full">Total rounds: ${recent.length}</span>
-        <span class="pill px-2 py-1 rounded-full">Avg10: ${fmtTotal(Number(avg10.toFixed(1)))}</span>
+        <span class="pill px-2 py-1 rounded-full">Avg10: ${fmtTotalRel(Number(avg10.toFixed(1)))}</span>
+        <span class="pill px-2 py-1 rounded-full">Base: ${fmtTotalRel(baseRel())}</span>
       `;
 
       el.recentList.innerHTML = recent
-        .slice()
-        .sort((a,b)=> new Date(b.date) - new Date(a.date))
+        .slice().sort((a,b)=> new Date(b.date)-new Date(a.date))
         .map(r => {
-          const t = totalOf(r);
+          const t = totalScore(r, "par");
           return `
             <button class="tap w-full text-left rounded-2xl border p-3 hover:bg-neutral-50" data-open="${r.id}">
               <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0">
                   <div class="text-xs text-neutral-500">${new Date(r.date).toLocaleDateString()}</div>
-                  <div class="text-sm font-semibold truncate">${escapeHtml(r.location || "—")}</div>
+                  <div class="text-sm font-semibold truncate">${escapeHtml(r.course || "—")}</div>
                 </div>
-                <div class="text-lg font-semibold tabular-nums">${fmtTotal(t)}</div>
+                <div class="text-lg font-semibold tabular-nums ${relColorClass(t)}">${fmtTotalRel(t)}</div>
               </div>
             </button>
           `;
@@ -753,6 +1104,23 @@
       });
     }
 
+    function renderSettings(){
+      const gm = state.settings.globalMode;
+      el.globalModePar.checked = (gm === "par");
+      el.globalModeStroke.checked = (gm === "stroke");
+      el.globalModeHint.textContent = `Current: ${gm === "par" ? "Par (relative)" : "Strokes (raw)"}. This affects all round screens and score entry.`;
+
+      const b = baseRel();
+      // NEW: sync My Base select + hint
+      el.baseRelSelect.value = String(b);
+      el.baseRelHint.textContent = `Current base: ${fmtTotalRel(b)}. Colors (Par mode): equal = gray, better = sky, worse = orange.`;
+
+      const am = state.settings.avgMode;
+      el.avgModePar.checked = (am === "par");
+      el.avgModeStroke.checked = (am === "stroke");
+      el.avgModeHint.textContent = `Main Average is calculated from ${am === "par" ? "Par rounds" : "Strokes rounds"} only (within current filter/search).`;
+    }
+
     function goList(){
       state.view = "list";
       state.activeId = null;
@@ -761,50 +1129,44 @@
       render();
       requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
     }
-    function goStats(){
-      state.view = "stats";
-      state.activeId = null;
-      render();
-      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
-    }
-    function openRound(id){
-      state.view = "round";
-      state.activeId = id;
-      render();
-      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
-    }
+    function goStats(){ state.view = "stats"; state.activeId = null; render(); requestAnimationFrame(()=>window.scrollTo({top:0,behavior:"instant"})); }
+    function goSettings(){ state.view = "settings"; state.activeId = null; render(); requestAnimationFrame(()=>window.scrollTo({top:0,behavior:"instant"})); }
+    function openRound(id){ state.view = "round"; state.activeId = id; render(); requestAnimationFrame(()=>window.scrollTo({top:0,behavior:"instant"})); }
 
-    function openModal(mode, roundId=null){
-      state.editingId = roundId;
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
-
-      if (mode === "create"){
-        el.modalTitle.textContent = "Create Round";
-        el.fieldDate.value = today;
-        el.fieldLocation.value = "";
-        el.fieldCompanions.value = "";
-        el.fieldExclude.checked = false;
-
-        state.modalHoles = 18;             // ✅ default
-        el.holesRadio18.checked = true;    // ✅ default UI
-        el.holesRadio9.checked = false;
-      } else {
-        const r = state.rounds.find(x=>x.id===roundId);
-        el.modalTitle.textContent = "Edit Round";
-        el.fieldDate.value = r?.date || today;
-        el.fieldLocation.value = r?.location || "";
-        el.fieldCompanions.value = r?.companions || "";
-        el.fieldExclude.checked = !!r?.exclude;
-
-        state.modalHoles = r?.holes || 18;
-        el.holesRadio18.checked = state.modalHoles === 18;
-        el.holesRadio9.checked  = state.modalHoles === 9;
-      }
+    function openModalAdd(){
+      state.editingId = null;
+      const today = toISODate(new Date());
+      el.modalTitle.textContent = "Add Round";
+      el.fieldDate.value = today;
+      el.fieldLocation.value = "";
+      el.fieldCompanions.value = "";
+      el.fieldExclude.checked = false;
+      el.holesRadio18.checked = true;
+      el.holesRadio9.checked = false;
 
       el.modalOverlay.classList.remove("hidden");
       el.modal.classList.remove("hidden");
     }
+
+    function openModalEdit(roundId){
+      state.editingId = roundId;
+      const r = state.rounds.find(x=>x.id===roundId);
+      if (!r) return;
+
+      el.modalTitle.textContent = "Edit Round";
+      el.fieldDate.value = r?.date || toISODate(new Date());
+      el.fieldLocation.value = r?.course || "";
+      el.fieldCompanions.value = r?.companion || "";
+      el.fieldExclude.checked = !!r?.exclude;
+
+      const holes = r?.holes || 18;
+      el.holesRadio18.checked = holes === 18;
+      el.holesRadio9.checked  = holes === 9;
+
+      el.modalOverlay.classList.remove("hidden");
+      el.modal.classList.remove("hidden");
+    }
+
     function closeModal(){
       el.modalOverlay.classList.add("hidden");
       el.modal.classList.add("hidden");
@@ -813,178 +1175,330 @@
 
     function saveModal(){
       const date = el.fieldDate.value || "";
-      const location = el.fieldLocation.value.trim();
-      const companions = el.fieldCompanions.value.trim();
+      const course = el.fieldLocation.value.trim();
+      const companion = el.fieldCompanions.value.trim();
       const exclude = el.fieldExclude.checked;
-
-      // ✅ read holes from radio (18 default)
       const holes = (document.querySelector('input[name="holesCount"]:checked')?.value === "9") ? 9 : 18;
 
-      if (!date || !location){
-        alert("Date와 Location은 필수입니다.");
-        return;
-      }
+      if (!date || !course){ alert("Date and Location are required."); return; }
 
-      if (!state.editingId){
-        const round = {
-          id: uid(),
-          date,
-          location,
-          companions,
-          holes,
-          scores: Array.from({length:holes},()=>0),
-          exclude,
-          createdAt: Date.now()
-        };
-        state.rounds.push(round);
-        save();
-        closeModal();
-        openRound(round.id);
-      } else {
+      if (state.editingId){
         const r = state.rounds.find(x=>x.id===state.editingId);
         if (!r) return;
 
-        if ((r.holes||18) !== holes){
-          const prev = r.scores || [];
-          r.scores = Array.from({length:holes}, (_,i)=> Number(prev[i]||0));
+        if ((r.holes || 18) !== holes){
+          const prevRel = r.relScores || [];
+          const prevStroke = r.strokeScores || [];
+          const prevPutts = r.putts || [];
+          r.relScores = Array.from({length:holes}, (_,i)=> Number(prevRel[i]||0));
+          r.strokeScores = Array.from({length:holes}, (_,i)=> Number(prevStroke[i]||0));
+          r.putts = Array.from({length:holes}, (_,i)=> Number(prevPutts[i]||0));
           r.holes = holes;
         }
 
-        r.date = date;
-        r.location = location;
-        r.companions = companions;
-        r.exclude = exclude;
-
+        r.date = date; r.course = course; r.companion = companion; r.exclude = exclude;
+        ensureRoundShape(r);
         save();
         closeModal();
         render();
+        return;
       }
+
+      const newRound = {
+        id: uid(),
+        date, course, companion, holes,
+        relScores: Array.from({length:holes}, ()=>0),
+        strokeScores: Array.from({length:holes}, ()=>0),
+        putts: Array.from({length:holes}, ()=>0),
+        entryMode: globalMode(),
+        exclude,
+        notes: "",
+        createdAt: Date.now()
+      };
+
+      ensureRoundShape(newRound);
+      state.rounds.push(newRound);
+      save();
+      closeModal();
+      openRound(newRound.id);
     }
 
-    const SHEET_VALUES = [-3,-2,-1,0,1,2,3,4,5,6,7,8];
+    const SHEET_VALUES_REL = [-3,-2,-1,0,1,2,3,4,5,6,7,8];
+    const SHEET_VALUES_STROKE = [1,2,3,4,5,6,7,8,9,10,11,12];
+    const PUTTS_VALUES = [0,1,2,3,4,5,6];
+
+    function updateSheetSummary(mode, score, putts){
+      const scoreText = (mode === "stroke")
+        ? (score > 0 ? String(score) : "—")
+        : (score > 0 ? "+" + score : String(score));
+      const puttsText = (putts > 0 ? String(putts) : "—");
+      el.summaryScore.textContent = `Score: ${scoreText}`;
+      el.summaryPutts.textContent = `Putts: ${puttsText}`;
+      el.summaryScore.classList.toggle("selected-pill", (mode === "stroke") ? (score > 0) : true);
+      el.summaryPutts.classList.toggle("selected-pill", putts > 0);
+    }
+
+    function focusPuttsSection(){
+      el.puttsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.puttsSection.classList.add("focus-pulse");
+      setTimeout(()=> el.puttsSection.classList.remove("focus-pulse"), 800);
+    }
+
     function openSheet(holeIndex){
       const r = state.rounds.find(x=>x.id===state.activeId);
       if (!r) return;
+      ensureRoundShape(r);
 
       state.sheet.open = true;
       state.sheet.holeIndex = holeIndex;
 
-      el.sheetCourse.textContent = r.location || "—";
+      el.sheetCourse.textContent = r.course || "—";
       el.sheetHole.textContent = `Hole ${holeIndex+1}`;
 
-      el.sheetGrid.innerHTML = SHEET_VALUES.map(v => `
-        <button class="tap py-5 rounded-2xl border text-2xl font-semibold bg-white hover:bg-neutral-50"
-                data-val="${v}">
-          ${v>0?("+"+v):v}
-        </button>
-      `).join("");
+      const mode = globalMode();
+      el.sheetNote.textContent = (mode === "stroke")
+        ? "Strokes mode: enter raw strokes first, then putts."
+        : "Par mode: enter relative score compared to par (under/over), then putts.";
 
-      el.sheetGrid.querySelectorAll("[data-val]").forEach(btn => {
-        btn.addEventListener("click", () => setHoleScore(Number(btn.dataset.val)));
+      const currentScore = (mode === "stroke") ? Number(r.strokeScores[holeIndex]||0) : Number(r.relScores[holeIndex]||0);
+      const currentPutts = Number(r.putts[holeIndex]||0);
+      updateSheetSummary(mode, currentScore, currentPutts);
+
+      const scoreValues = (mode === "stroke") ? SHEET_VALUES_STROKE : SHEET_VALUES_REL;
+      el.sheetScoreGrid.innerHTML = scoreValues.map(v => {
+        const isSelected = v === currentScore;
+        const label = (mode === "stroke") ? String(v) : (v>0?("+"+v):String(v));
+        return `
+          <button class="tap py-4 rounded-2xl border text-xl font-semibold bg-white hover:bg-neutral-50 ${isSelected ? "selected-pill" : ""}" data-score="${v}">
+            ${label}
+          </button>
+        `;
+      }).join("");
+
+      el.sheetPuttsGrid.innerHTML = PUTTS_VALUES.map(p => {
+        const isSelected = p === currentPutts;
+        return `
+          <button class="tap py-3 rounded-2xl border text-sm font-semibold bg-white hover:bg-neutral-50 ${isSelected ? "selected-pill" : ""}" data-putts="${p}">
+            ${p}
+          </button>
+        `;
+      }).join("");
+
+      el.sheetScoreGrid.querySelectorAll("[data-score]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const val = Number(btn.dataset.score);
+          if (mode === "stroke") r.strokeScores[holeIndex] = val; else r.relScores[holeIndex] = val;
+          r.entryMode = mode;
+          save();
+          state.sheet.focusPutts = true;
+          openSheet(holeIndex);
+          renderRound(); renderList(); renderTop();
+        });
+      });
+
+      el.sheetPuttsGrid.querySelectorAll("[data-putts]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const p = Number(btn.dataset.putts);
+          r.putts[holeIndex] = p;
+          save();
+          openSheet(holeIndex);
+          renderRound(); renderList(); renderTop();
+        });
       });
 
       el.sheetOverlay.classList.remove("hidden");
       el.sheet.classList.remove("hidden");
+
+      if (state.sheet.focusPutts){
+        state.sheet.focusPutts = false;
+        requestAnimationFrame(focusPuttsSection);
+      }
     }
+
     function closeSheet(){
       state.sheet.open = false;
+      state.sheet.focusPutts = false;
       el.sheetOverlay.classList.add("hidden");
       el.sheet.classList.add("hidden");
     }
-    function setHoleScore(val){
+
+    function resetRound(){
       const r = state.rounds.find(x=>x.id===state.activeId);
       if (!r) return;
-      const i = state.sheet.holeIndex;
-
-      if (!Array.isArray(r.scores)) r.scores = Array.from({length:r.holes||18},()=>0);
-      r.scores[i] = val;
-
+      if (!confirm("Reset all hole scores and putts to 0?")) return;
+      const holes = r.holes || 18;
+      r.relScores = Array.from({length:holes}, ()=>0);
+      r.strokeScores = Array.from({length:holes}, ()=>0);
+      r.putts = Array.from({length:holes}, ()=>0);
       save();
-      closeSheet();
       render();
     }
 
-    // Events
-    el.tabList.addEventListener("click", () => goList());
-    el.tabStats.addEventListener("click", () => goStats());
-
-    el.addRoundBtn.addEventListener("click", () => openModal("create"));
-    el.search.addEventListener("input", () => { state.search = el.search.value; renderList(); });
-
-    el.yearTabs.forEach(btn => {
-      btn.addEventListener("click", () => {
-        state.yearFilter = btn.dataset.year;
-        el.yearTabs.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        renderList();
-      });
-    });
-
-    el.cancelModal.addEventListener("click", closeModal);
-    el.modalOverlay.addEventListener("click", closeModal);
-    el.saveModal.addEventListener("click", saveModal);
-
-    // ✅ keep state.modalHoles in sync (optional but nice)
-    el.holesRadio9.addEventListener("change", () => { if (el.holesRadio9.checked) state.modalHoles = 9; });
-    el.holesRadio18.addEventListener("change", () => { if (el.holesRadio18.checked) state.modalHoles = 18; });
-
-    el.backToList.addEventListener("click", goList);
-    el.editRoundBtn.addEventListener("click", () => openModal("edit", state.activeId));
-
-    el.excludeToggle.addEventListener("change", () => {
-      const r = state.rounds.find(x=>x.id===state.activeId);
-      if (!r) return;
-      r.exclude = el.excludeToggle.checked;
-      save();
-      render();
-    });
-
-    el.resetScoresBtn.addEventListener("click", () => {
-      const r = state.rounds.find(x=>x.id===state.activeId);
-      if (!r) return;
-      if (!confirm("Reset all hole scores to 0?")) return;
-      r.scores = Array.from({length:r.holes||18},()=>0);
-      save();
-      render();
-    });
-
-    el.deleteRoundBtn.addEventListener("click", () => {
+    function deleteRound(){
       const r = state.rounds.find(x=>x.id===state.activeId);
       if (!r) return;
       if (!confirm("Delete this round?")) return;
       state.rounds = state.rounds.filter(x=>x.id!==state.activeId);
       save();
       goList();
-    });
+    }
 
-    el.closeSheet.addEventListener("click", closeSheet);
-    el.sheetOverlay.addEventListener("click", closeSheet);
+    function downloadBackupJSON(){
+      const payload = { type: "GOLF_SCORE_BACKUP", version: 10, exportedAt: new Date().toISOString(), settings: state.settings, rounds: state.rounds };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `golf-score-backup-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 800);
+    }
 
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", () => requestAnimationFrame(syncBottomBarHeight));
+    async function restoreBackupJSON(file){
+      const text = await file.text();
+      let data;
+      try { data = JSON.parse(text); } catch { return alert("Invalid JSON file."); }
+      const rounds = data?.rounds;
+      if (!Array.isArray(rounds)) return alert("Unsupported backup file.");
+      if (!confirm("This will overwrite existing data. Continue?")) return;
+
+      state.rounds = rounds;
+      state.rounds.forEach(ensureRoundShape);
+
+      if (data?.settings && typeof data.settings === "object"){
+        state.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
+        // ensure constraints
+        state.settings.baseRel = clampInt(state.settings.baseRel, -3, 5);
+        saveSettings();
+      }
+      save();
+      alert("Restore complete. Reloading…");
+      location.reload();
+    }
+
+    function setGlobalMode(mode){
+      state.settings.globalMode = (mode === "stroke") ? "stroke" : "par";
+      saveSettings();
+      renderSettings();
+      renderList();
+      if (state.view === "round") renderRound();
+      if (state.view === "stats") renderStats();
+      renderTop();
+    }
+    function setAvgMode(mode){
+      state.settings.avgMode = (mode === "stroke") ? "stroke" : "par";
+      saveSettings();
+      renderSettings();
+      renderTop();
+    }
+    // NEW: set My Base
+    function setBaseRel(val){
+      state.settings.baseRel = clampInt(val, -3, 5);
+      saveSettings();
+      renderSettings();
+      renderList();
+      if (state.view === "round") renderRound();
+      if (state.view === "stats") renderStats();
+      renderTop();
+    }
 
     function render(){
+      state.rounds.forEach(ensureRoundShape);
       updateYearTabCounts();
       renderTop();
       if (state.view === "list") renderList();
       if (state.view === "round") renderRound();
       if (state.view === "stats") renderStats();
+      if (state.view === "settings") renderSettings();
       renderTop();
       requestAnimationFrame(syncBottomBarHeight);
     }
 
+    // Wire events
+    el.tabList.addEventListener("click", () => { state.view="list"; goList(); });
+    el.tabStats.addEventListener("click", () => { state.view="stats"; goStats(); });
+    el.tabSettings.addEventListener("click", () => { state.view="settings"; goSettings(); });
+
+    el.addRoundBtn.addEventListener("click", openModalAdd);
+
+    el.search.addEventListener("input", () => { state.search = el.search.value; renderList(); renderTop(); });
+
+    el.yearTabs.forEach(btn => {
+      btn.addEventListener("click", () => {
+        state.yearFilter = btn.dataset.year;
+        el.yearTabs.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderList(); renderTop(); animateList();
+      });
+    });
+
+    el.backToList.addEventListener("click", goList);
+    el.editRoundBtn.addEventListener("click", () => openModalEdit(state.activeId));
+
+    el.cancelModal.addEventListener("click", closeModal);
+    el.modalOverlay.addEventListener("click", closeModal);
+    el.saveModal.addEventListener("click", saveModal);
+
+    el.excludeToggle.addEventListener("change", () => {
+      const r = state.rounds.find(x=>x.id===state.activeId);
+      if (!r) return;
+      r.exclude = el.excludeToggle.checked;
+      save();
+      renderTop(); renderList(); renderRound();
+    });
+
+    el.resetScoresBtn.addEventListener("click", resetRound);
+    el.deleteRoundBtn.addEventListener("click", deleteRound);
+
+    el.btnSaveNotes.addEventListener("click", () => {
+      const r = state.rounds.find(x=>x.id===state.activeId);
+      if (!r) return;
+      r.notes = el.roundNotes.value || "";
+      save();
+      el.btnSaveNotes.textContent = "Saved!";
+      setTimeout(()=>{ el.btnSaveNotes.textContent = "Save Notes"; }, 900);
+    });
+
+    // Sheet close controls
+    el.closeSheet.addEventListener("click", closeSheet);
+    el.sheetOverlay.addEventListener("click", closeSheet);
+
+    el.doneSheetBtn.addEventListener("click", () => {
+      springTap(el.doneSheetBtn);
+      setTimeout(closeSheet, 110);
+    });
+
+    // Settings radios
+    el.globalModePar.addEventListener("change", () => { if (el.globalModePar.checked) setGlobalMode("par"); });
+    el.globalModeStroke.addEventListener("change", () => { if (el.globalModeStroke.checked) setGlobalMode("stroke"); });
+    el.avgModePar.addEventListener("change", () => { if (el.avgModePar.checked) setAvgMode("par"); });
+    el.avgModeStroke.addEventListener("change", () => { if (el.avgModeStroke.checked) setAvgMode("stroke"); });
+
+    // NEW: My Base select
+    el.baseRelSelect.addEventListener("change", () => {
+      setBaseRel(el.baseRelSelect.value);
+    });
+
+    // Backup/Restore
+    el.btnDownloadJSON.addEventListener("click", downloadBackupJSON);
+    el.btnRestoreJSON.addEventListener("click", () => {
+      const f = el.restoreFile.files[0];
+      if (!f) return alert("Please choose a JSON backup file first.");
+      restoreBackupJSON(f);
+    });
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", () => requestAnimationFrame(syncBottomBarHeight));
+
     render();
   </script>
 
-  <!-- For PWA START -->
-   <script>
+  <!-- PWA SW -->
+  <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("/sw.js");
       });
     }
   </script>
-  <!-- For PWA END -->
-
 </body>
 </html>
